@@ -36,8 +36,15 @@ struct Args {
     )]
     kernel_version: Option<String>,
 
-    #[arg(short, long, help = "Firmware files to include (file or directory)")]
+    #[arg(long, help = "Firmware files to include (file or directory)")]
     firmware: Option<String>,
+
+    #[arg(
+        short,
+        long,
+        help = "Additional files to include (format: src:dst, can be repeated)"
+    )]
+    file: Vec<String>,
 
     #[arg(
         short,
@@ -115,6 +122,7 @@ fn run() -> Result<()> {
         args.modules,
         args.kernel_version,
         args.firmware,
+        args.file,
     )?;
 
     let result = builder.build(&binary_path)?;

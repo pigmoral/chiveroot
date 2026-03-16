@@ -11,6 +11,7 @@ pub struct InitramfsBuilder {
     modules_path: Option<String>,
     kernel_version: Option<String>,
     firmware_path: Option<String>,
+    extra_files: Vec<String>,
 }
 
 impl InitramfsBuilder {
@@ -21,6 +22,7 @@ impl InitramfsBuilder {
         modules_path: Option<String>,
         kernel_version: Option<String>,
         firmware_path: Option<String>,
+        extra_files: Vec<String>,
     ) -> Result<Self> {
         let output_path = PathBuf::from(&output);
         let is_dir = output_path.exists() && output_path.is_dir();
@@ -39,6 +41,7 @@ impl InitramfsBuilder {
             modules_path,
             kernel_version,
             firmware_path,
+            extra_files,
         })
     }
 
@@ -51,6 +54,7 @@ impl InitramfsBuilder {
         self.create_symlinks(root)?;
         self.copy_modules(root)?;
         self.copy_firmware(root)?;
+        self.copy_extra_files(root)?;
         self.create_init_link(root)?;
 
         self.package(root)?;
@@ -252,6 +256,53 @@ impl InitramfsBuilder {
                 }
             }
             println!("Copied firmware to {:?}", dest);
+        }
+
+        Ok(())
+    }
+
+    fn copy_extra_files(&self, root: &Path) -> Result<()> {
+        for file_spec in &self.extra_files {
+            let parts: Vec<&str> = file_spec.splitn(2, ':').collect();
+            if parts.len() != 2 {
+                eprintln!(
+                    "Warning: invalid file spec '{}', expected src:dst",
+                    file_spec
+                );
+                continue;
+            }
+
+            let src = Path::new(parts[0]);
+            let dst_spec = parts[1];
+
+            if !src.exists() {
+                eprintln!("Warning: source file does not exist: {:?}", src);
+                continue;
+            }
+
+            let dst = root.join(dst_spec.trim_start_matches('/'));
+
+            let dest_path = if dst_spec.ends_with('/') {
+                dst
+            } else if dst.exists() && dst.is_dir() {
+                dst
+            } else {
+                dst.clone()
+            };
+
+            let final_dest = if dest_path.is_dir() || dst_spec.ends_with('/') {
+                let file_name = src.file_name().unwrap_or_default();
+                dest_path.join(file_name)
+            } else {
+                dest_path
+            };
+
+            if let Some(parent) = final_dest.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            fs::copy(src, &final_dest)?;
+            println!("Copied extra file: {:?} -> {:?}", src, final_dest);
         }
 
         Ok(())
