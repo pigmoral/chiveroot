@@ -2,6 +2,10 @@
 
 A tool to build chivebox initramfs for embedded systems.
 
+chiveroot has been integrated into the [chivebox](https://github.com/pigmoral/chivebox) repository as a workspace member.
+
+---
+
 ## Features
 
 - Build initramfs with chivebox (BusyBox-style multi-call binary)
